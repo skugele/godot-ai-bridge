@@ -77,9 +77,9 @@ if __name__ == "__main__":
 
         while True:
             # receive action from client
-            action = None
-            while action not in ACTION_MAP.keys():
-                action = input("action (A, W, S, D, Q, E)? ")
+            action = input("action (A, W, S, D, Q, E)? ")
+            if action not in ACTION_MAP:
+                break
 
             request = create_request(action)
             send_request(connection, request)

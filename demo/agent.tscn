@@ -3,8 +3,6 @@
 [ext_resource path="res://agent.gd" type="Script" id=1]
 [ext_resource path="res://icon.png" type="Texture" id=2]
 
-
-
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 32.0
 height = 0.0

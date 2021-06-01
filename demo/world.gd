@@ -33,8 +33,4 @@ func _publish_state():
 
 # signal handler for incoming actions
 func _on_action_received(action_details):
-	print('received action_details "%s"' % action_details)
-	if action_details == null:
-		return
-	
 	agent.add_action(action_details['data']['action'])
