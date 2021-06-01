@@ -3,11 +3,11 @@
 extends Node2D
 
 # Godot AI Bridge (GAB) Variables
-onready var gab = $GabLib # library reference
-onready var context = null # socket context (a unique identifier using in call to "send")
+onready var gab = $GabLib  # library reference
+onready var context = null  # socket context (a unique identifier using in call to "send")
 
-onready var pub_options = {'port':10001} # state publisher options
-onready var sub_options = {'port':10002} # action listener options
+onready var pub_options = {'port':10001}  # state publisher options
+onready var sub_options = {'port':10002}  # action listener options
 
 func _ready():
 	
