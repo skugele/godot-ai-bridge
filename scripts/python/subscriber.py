@@ -62,10 +62,10 @@ def receive(connection):
     # messages are received as strings of the form: "<TOPIC> <JSON>". this splits the message string into TOPIC
     # and JSON-encoded payload
     ndx = msg.find('{')
-    topic, enc_payload = msg[0:ndx - 1], msg[ndx:]
+    topic, encoded_payload = msg[0:ndx - 1], msg[ndx:]
 
     # unmarshal JSON message content
-    payload = json.loads(enc_payload)
+    payload = json.loads(encoded_payload)
 
     return topic, payload
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
         while True:
             topic, payload = receive(connection)
-            print(str(payload), flush=True)
+            print(f'topic: {topic}; payload: {payload}', flush=True)
 
     except KeyboardInterrupt:
 
