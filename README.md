@@ -1,1 +1,1 @@
-# godot-ai-bridge
+# godot-ai-bridge (GAB)
