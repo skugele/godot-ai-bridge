@@ -1,9 +1,18 @@
+# GDScript: agent.gd
+
 extends Node2D
 
-# a list of actions pending execution
+const LINEAR_DELTA = 10  # change in pixels - used for linear movements
+const ANGULAR_DELTA = 5.0  # change in degrees - used for rotational actions
+
+# an identifier for this agent
+export var id = 1
+
+# a list of actions that are pending execution
 onready var pending_actions = []
 
-func _process(delta):
+
+func _process(_delta):
 	var action = pending_actions.pop_front()
 	if action:
 		execute(action)
@@ -13,12 +22,12 @@ func add_action(action):
 		
 func execute(action):
 	match action:
-		'up': global_position.y -= 10
-		'down': global_position.y += 10
-		'left': global_position.x -= 10
-		'right': global_position.x += 10
-		'rotate_clockwise': rotation_degrees += 5.0
-		'rotate_counterclockwise': rotation_degrees -= 5.0
+		'up': global_position.y -= LINEAR_DELTA
+		'down': global_position.y += LINEAR_DELTA
+		'left': global_position.x -= LINEAR_DELTA
+		'right': global_position.x += LINEAR_DELTA
+		'rotate_clockwise': rotation_degrees += ANGULAR_DELTA
+		'rotate_counterclockwise': rotation_degrees -= ANGULAR_DELTA
 		
 		# default case: unrecognized actions
 		_: print('unrecogized action: ', action) 
