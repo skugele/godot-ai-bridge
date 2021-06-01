@@ -14,6 +14,7 @@ import zmq  # Python Bindings for ZeroMq (PyZMQ)
 
 DEFAULT_TIMEOUT = 5000  # in milliseconds
 
+DEFAULT_AGENT = 1
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10002
 
@@ -33,6 +34,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='Godot AI Bridge (GAB) - DEMO Environment Action Client')
 
+    parser.add_argument('--id', type=int, required=False, default=DEFAULT_AGENT,
+                        help=f'the id of the agent to which this action will be sent (default: {DEFAULT_AGENT})')
     parser.add_argument('--host', type=str, required=False, default=DEFAULT_HOST,
                         help=f'the IP address of host running the GAB action listener (default: {DEFAULT_HOST})')
     parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
@@ -76,15 +79,16 @@ if __name__ == '__main__':
         # a global action counter (included in request payload)
         seqno = 0
 
-        # MAIN LOOP: receive actions from user via CLI and sends them to GAB action listener
+        # MAIN LOOP: receive action via CLI, and send it to GAB action listener
+        print('Select an action ID followed by [ENTER]. (All others quit.)')
         while True:
-            action = input('action (A, W, S, D, Q, E)?').upper()
+            action = input('>> A, W, S, D, Q, or E?  ').upper()
             if action not in ACTION_MAP:
                 break
 
             seqno += 1
 
-            _reply = send(connection, request={'seqno': seqno, 'action': ACTION_MAP[action]})
+            _reply = send(connection, request={'seqno': seqno, 'agent_id': args.id, 'action': ACTION_MAP[action]})
 
     except KeyboardInterrupt:
 
