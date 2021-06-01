@@ -1,0 +1,8 @@
+[gd_resource type="NativeScript" load_steps=2 format=2]
+
+[ext_resource path="res://godot_ai_bridge.tres" type="GDNativeLibrary" id=1]
+
+[resource]
+resource_name = "AiBridge"
+class_name = "AgentComm"
+library = ExtResource( 1 )
