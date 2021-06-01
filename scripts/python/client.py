@@ -1,17 +1,23 @@
 #
-# A ZeroMQ Client (Request-Reply) for Submitting Agent Actions to Godot.
+# Godot AI Bridge (GAB) - DEMO Environment Action Client.
+#
+# Description: Used to submit movement and rotation actions to the agent in the DEMO environment via CLI
+# Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
 
-import zmq
 import json
 import argparse
 import sys
 import os
 
+import zmq  # Python Bindings for ZeroMq (PyZMQ)
+
 DEFAULT_TIMEOUT = 5000  # in milliseconds
+
+DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10002
 
-# maps single character user inputs to Godot agent actions
+# maps single character user inputs from command line to Godot agent actions
 ACTION_MAP = {'W': 'up',
               'S': 'down',
               'A': 'left',
@@ -21,69 +27,64 @@ ACTION_MAP = {'W': 'up',
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='A Network Client for Requesting Agent Actions in Godot')
+    """ Parses command line arguments.
 
+    :return: argparse parser with parsed command line args
+    """
+    parser = argparse.ArgumentParser(description='Godot AI Bridge (GAB) - DEMO Environment Action Client')
+
+    parser.add_argument('--host', type=str, required=False, default=DEFAULT_HOST,
+                        help=f'the IP address of host running the GAB action listener (default: {DEFAULT_HOST})')
     parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
-                        help='the port number of the Godot action listener')
-    parser.add_argument('--verbose', required=False, action="store_true",
-                        help='increases verbosity (displays requests & replies)')
+                        help=f'the port number of the GAB action listener (default: {DEFAULT_PORT})')
 
     return parser.parse_args()
 
 
-def establish_connection(args):
-    context = zmq.Context()
+def connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
+    """ Establishes a connection to Godot AI Bridge action listener.
 
-    socket = context.socket(zmq.REQ)
-    socket.connect('tcp://localhost:' + str(args.port))
+    :param host: the GAB action listener's host IP address
+    :param port: the GAB action listener's port number
+    :return: socket connection
+    """
+    socket = zmq.Context().socket(zmq.REQ)
+    socket.connect(f'tcp://{host}:{str(port)}')
 
-    # without a timeout on receive the process can hang indefinitely
+    # without timeout the process can hang indefinitely
     socket.setsockopt(zmq.RCVTIMEO, DEFAULT_TIMEOUT)
-
     return socket
 
 
-def create_request(action_key):
-    request = {
-        'header': {},
-        'data': {'action': ACTION_MAP[action_key]}
-    }
-    return request
+def send(connection, request):
+    """ Encodes request and sends it to the GAB action listener.
+
+    :param connection: connection: a connection to the GAB action listener
+    :param request: a dictionary containing the action request payload
+    :return: GAB action listener's (SUCCESS or ERROR) reply
+    """
+    encoded_request = json.dumps(request)
+    connection.send_string(encoded_request)
+    return connection.recv_json()
 
 
-def send_request(connection, request):
-    request_as_json = json.dumps(request)
-    if args.verbose:
-        print("request: ", request_as_json)
-
-    connection.send_string(request_as_json)
-
-
-def receive_reply(connection, args):
-    reply = connection.recv_json()
-    if args.verbose:
-        print("reply: ", reply)
-
-    return reply
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
-        # parse command line arguments
         args = parse_args()
+        connection = connect(host=args.host, port=args.port)
 
-        # establish connection to Godot action server
-        connection = establish_connection(args)
+        # a global action counter (included in request payload)
+        seqno = 0
 
+        # MAIN LOOP: receive actions from user via CLI and sends them to GAB action listener
         while True:
-            # receive action from client
-            action = input("action (A, W, S, D, Q, E)? ")
+            action = input('action (A, W, S, D, Q, E)?').upper()
             if action not in ACTION_MAP:
                 break
 
-            request = create_request(action)
-            send_request(connection, request)
-            _ = receive_reply(connection, args)
+            seqno += 1
+
+            _reply = send(connection, request={'seqno': seqno, 'action': ACTION_MAP[action]})
 
     except KeyboardInterrupt:
 

@@ -1,84 +1,83 @@
 #
-# A ZeroMQ Subscriber (Pub-Sub) for Receiving Sensor Messages from Godot
+# Godot AI Bridge (GAB) - DEMO Environment State Listener.
+#
+# Description: Used to receive agent state information from DEMO environment via CLI
+# Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
 
+import json
 import argparse
 import sys
 import os
-import json
 
-import zmq  # ZeroMq
+import zmq  # Python Bindings for ZeroMq (PyZMQ)
 
 DEFAULT_TIMEOUT = 5000  # in milliseconds
+
+DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10001
+
+# by default, receives all published messages (i.e., all topics accepted)
+MSG_TOPIC_FILTER = ''
 
 
 def parse_args():
     """ Parses command line arguments. """
-    parser = argparse.ArgumentParser(description='A Network Client for Requesting Agent Actions in Godot')
+    parser = argparse.ArgumentParser(description='Godot AI Bridge (GAB) - DEMO Environment State Listener')
 
-    # to deal with windows command line strangeness the topic needs to be entered with many escapes: e.g.,
-    # '//agents\1' will be interpreted as '/agents/1'
-    parser.add_argument('--topic', metavar='TOPIC', type=str, required=False,
-                        help='the topics to subscribe', default='')
+    parser.add_argument('--host', type=str, required=False, default=DEFAULT_HOST,
+                        help=f'the IP address of host running the GAB state publisher (default: {DEFAULT_HOST})')
     parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
-                        help='the port number of the Godot action listener')
-    parser.add_argument('--verbose', required=False, action="store_true",
-                        help='increases verbosity (displays requests & replies)')
+                        help=f'the port number of the GAB state publisher (default: {DEFAULT_PORT})')
 
     return parser.parse_args()
 
 
-def split(m):
-    """ Splits message into separate topic and content strings.
-    :param m: a ZeroMq message containing the topic string and JSON content
-    :return: a tuple containing the topic and JSON content
+def connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
+    """ Establishes a connection to Godot AI Bridge state publisher.
+
+    :param host: the GAB state publisher's host IP address
+    :param port: the GAB state publisher's port number
+    :return: socket connection
     """
-    ndx = m.find('{')
-    return m[0:ndx - 1], m[ndx:]
 
+    # creates a ZeroMQ subscriber socket
+    socket = zmq.Context().socket(zmq.SUB)
 
-def establish_connection(args):
-    #  creates a subscriber socket
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-
-    # filters messages by topic
-    if args.verbose and len(args.topic) > 0:
-        print('subscribing to topic: ', str(args.topic), flush=True)
-
-    socket.setsockopt_string(zmq.SUBSCRIBE, str(args.topic))
+    socket.setsockopt_string(zmq.SUBSCRIBE, MSG_TOPIC_FILTER)
     socket.setsockopt(zmq.RCVTIMEO, DEFAULT_TIMEOUT)
 
-    socket.connect('tcp://localhost:' + str(args.port))
-
+    socket.connect(f'tcp://{host}:{str(port)}')
     return socket
 
 
+def receive(connection):
+    """ Receives and decodes next message from the GAB state publisher, waiting until TIMEOUT reached in none available.
+
+    :param connection: a connection to the GAB state publisher
+    :return: a tuple containing the received message's topic and payload
+    """
+    msg = connection.recv_string()
+
+    # messages are received as strings of the form: "<TOPIC> <JSON>". this splits the message string into TOPIC
+    # and JSON-encoded payload
+    ndx = msg.find('{')
+    topic, enc_payload = msg[0:ndx - 1], msg[ndx:]
+
+    # unmarshal JSON message content
+    payload = json.loads(enc_payload)
+
+    return topic, payload
+
+
 if __name__ == "__main__":
-    # parse command line arguments
-    args = parse_args()
-
     try:
-
-        # establish connection to Godot state publisher
-        connection = establish_connection(args)
+        args = parse_args()
+        connection = connect(host=args.host, port=args.port)
 
         while True:
-            msg = connection.recv_string()
-
-            topic, content = split(msg)
-
-            # unmarshal JSON message content
-            obj = json.loads(content)
-
-            if args.verbose:
-                print('new message on topic: ', topic)
-                print('header: ', obj['header'])
-                print('data: ', obj['data'])
-                print('')
-            else:
-                print(content, flush=True)
+            topic, payload = receive(connection)
+            print(str(payload), flush=True)
 
     except KeyboardInterrupt:
 
