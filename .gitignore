@@ -17,6 +17,7 @@ export_presets.cfg
 *.o
 *.obj
 *.out
+*.os
 
 # Executables
 *.exe
