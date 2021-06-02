@@ -128,7 +128,7 @@ void marshal_variant(const godot::Variant& value, nlohmann::json& marshaler) {
 }
 
 godot::Variant unmarshal_to_variant(nlohmann::json& value) {
-	godot::Variant v(NULL);
+	godot::Variant v(0);
 	if (value.is_primitive()) {
 		v = unmarshal_to_basic_variant(value);
 	}
@@ -159,12 +159,12 @@ godot::Variant unmarshal_to_basic_variant(nlohmann::json& value) {
 	}
 	else {
 		std::cerr << "unable to unmarshal basic type to variant: type not recognized" << std::endl;
-		return godot::Variant(NULL);
+		return godot::Variant(0);
 	}
 }
 
 godot::Variant unmarshal_to_structured_variant(nlohmann::json& value) {
-	godot::Variant v(NULL);
+	godot::Variant v(0);
 	if (value.is_array()) {
 		v = unmarshal_to_array_variant(value);
 	}

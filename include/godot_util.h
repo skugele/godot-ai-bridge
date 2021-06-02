@@ -74,7 +74,7 @@ inline godot::Variant unmarshal_to_bool_variant(nlohmann::json& value) {
 }
 
 inline godot::Variant unmarshal_to_nil_variant(nlohmann::json& value) {
-	return godot::Variant(NULL);
+	return godot::Variant(0);
 }
 
 godot::Variant unmarshal_to_variant(nlohmann::json& value);
