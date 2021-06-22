@@ -12,12 +12,13 @@ namespace gab {
 	// header elements
 	static const char* SEQNO = "seqno";
 
+	// TODO: can this be used for both the publisher's messages and the listener's replies???
 	inline void construct_message_header(json& marshaler, uint64_t seq_no)
 	{
 		marshaler[SEQNO] = seq_no;
 	}
 
-
+	// TODO: this should be moved into the Publisher class as a private method
 	inline void construct_message(zmq::message_t& msg, const std::string& topic, const std::string& payload) {
 		char* p_buffer = (char*)msg.data();
 
@@ -31,10 +32,12 @@ namespace gab {
 		memcpy(p_buffer + topic.length() + 1, payload.c_str(), payload.length());
 	}
 
+	// TODO: this should be moved into the Publisher class as a private method
 	inline size_t get_message_length(const std::string& topic, const std::string& msg) {
 		return topic.length() + msg.length() + 1; // additional character for space between topic and json
 	}
 
+	// TODO: can this be used for both the publisher's messages and the listener's replies???
 	inline std::string serialize(const godot::Variant v_payload, uint64_t seq_no) {
 		json marshaler;
 

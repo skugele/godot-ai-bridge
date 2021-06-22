@@ -20,19 +20,41 @@
 #include "msg.h"
 
 namespace gab {
-	static const int DEFAULT_PUBLISHER_PORT = 10001;
-	static const int DEFAULT_LISTENER_PORT = 10002;
-
 	// forward declarations
 	class GodotAiBridge;
 	class Listener;
 	class Publisher;
 
+	// constants
+	static const int DEFAULT_PUBLISHER_PORT = 10001;  // this port will be used for the publisher unless otherwise specified in Godot socket_options
+	static const int DEFAULT_LISTENER_PORT = 10002;  // this port will be used for the listener unless otherwise specified in Godot socket_options
+
+	static const std::map<int, int> DEFAULT_PUBLISHER_OPTIONS = { 
+		{ZMQ_SNDHWM, 10},  // send high watermark (messages dropped when high watermark exceeded)
+		{ZMQ_SNDTIMEO, 250},  // send timeout in milliseconds
+	};
+
+	static const std::map<int, int> DEFAULT_LISTENER_OPTIONS = {
+		{ZMQ_RCVTIMEO, 250}, // receive timeout in milliseconds
+		{ZMQ_LINGER, 0}, // pending messages discarded immediately on socket close
+		{ZMQ_RCVHWM, 10}, // receive high watermark (messages dropped when high watermark exceeded)
+		{ZMQ_REQ_RELAXED, 1}, // relax strict alternation between request and reply
+		{ZMQ_REQ_CORRELATE, 1}, // adds extra frame to requests and replies for matching purposes
+
+	};
+
+	// shared verbosity variable
+	static int verbosity = 0;
+
+	/* Listener Class
+	* 
+	*  Description: Receives Godot external requests for environment events (e.g., agent actions, or agents joining/leaving the environment).
+	*****************************************************************************************************************************************/
 	class Listener {
 	private:
 		zmq::socket_t* p_socket;  // ZeroMq socket backing this connection
-		uint64_t seq_no;  // event sequence numbers
-		uint16_t port;
+		uint16_t port;  // network port number used for socket connection
+		uint64_t seq_no;  // request sequence numbers
 
 		GodotAiBridge& bridge;  // used to communicate with Godot engine (e.g., sending signals)
 
@@ -45,21 +67,29 @@ namespace gab {
 		void receive(const zmq::message_t& request);
 	};
 
+	/* Publisher Class
+	*
+	*  Description: Broadcasts messages from Godot (e.g., agent state information) to external consumers.
+	*****************************************************************************************************************************************/
 	class Publisher {
 	private:
 		zmq::socket_t* p_socket;  // ZeroMq socket backing this connection
-		uint16_t port;
-		uint64_t seq_no;  // publisher message sequence numbers
+		uint16_t port;  // network port number used for socket connection
+		uint64_t seq_no;  // published message sequence numbers
 
 	public:
-
-		// TODO: change port to const std::string& endpoint
 		Publisher(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port);
 
 		void publish(const std::string& topic, const std::string& content);
 		uint64_t get_seq_no();
 	};
 
+	/* GodotAiBridge Class (subclass of godot::Node)
+	*
+	*  Description: A Godot Node that functions as the interface between the Godot engine and the communication middleware provided by
+	*               this library. It provides the mechanism by which environment state can be sent to Godot external clients, and events
+	*               can be requested and sent to Godot from those clients.
+	*****************************************************************************************************************************************/
 	class GodotAiBridge : public godot::Node {
 		GODOT_CLASS(GodotAiBridge, Node);
 
@@ -83,10 +113,39 @@ namespace gab {
 		void _init();
 
 		// GDNative exposed methods
-		void connect(godot::Variant v_options);
-		void send(const godot::Variant v_topic, const godot::Variant v_content);
-		void notify(const zmq::message_t& request, std::string& parse_errors);
+		void connect(godot::Variant v_options);  // initializes the network sockets and listener threads. operation can be customized via user supplied options.
+		void send(const godot::Variant v_topic, const godot::Variant v_content);  // sends a message from Godot engine to external clients on the specified message topic.
+		void notify(const zmq::message_t& request, std::string& parse_errors);  // emits a signal to Godot along with the requested event details
 	};
+
+	// Maps socket options from Godot Dictionary to a std::map usable by ZeroMQ
+	inline void map_options(const godot::Dictionary& v_options, std::map<int, int>& options_out) {
+
+		// Map from Godot's String options to ZMQ options. The keys in this map are the complete list of connection options available from Godot.
+		static std::map<godot::String, int> GODOT_OPTION_TO_ZMQ_MAP = {
+			{godot::String("ZMQ_RCVHWM"), ZMQ_RCVHWM},
+			{godot::String("ZMQ_RCVTIMEO"), ZMQ_RCVTIMEO},
+			{godot::String("ZMQ_SNDHWM"), ZMQ_SNDHWM},
+			{godot::String("ZMQ_SNDTIMEO"), ZMQ_SNDTIMEO},
+			{godot::String("ZMQ_CONFLATE"), ZMQ_CONFLATE},
+		};
+
+		// iterate over Godot dictionary keys
+		godot::Array keys = v_options.keys();
+		for (int i = 0; i < keys.size(); i++)
+		{
+			godot::String key = keys[i];
+
+			// if Godot key matches known ZMQ key, then set value in output map
+			auto search = GODOT_OPTION_TO_ZMQ_MAP.find(key);
+			if (search != GODOT_OPTION_TO_ZMQ_MAP.end()) {
+				int zmq_option = search->second;
+				int zmq_value = (int)convert_int(v_options[key]);
+
+				options_out[zmq_option] = zmq_value;
+			}					
+		}
+	}
 
 	inline void set_options(zmq::socket_t& socket, std::map<int, int>& socket_options) {
 		for (std::map<int, int>::iterator it = socket_options.begin(); it != socket_options.end(); ++it) {
