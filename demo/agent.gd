@@ -31,3 +31,9 @@ func execute(action):
 		
 		# default case: unrecognized actions
 		_: print('unrecogized action: ', action) 
+		
+func get_state():
+	return {
+		'position' : [global_position.x, global_position.y],
+		'rotation_in_degrees' : rotation_degrees
+	}

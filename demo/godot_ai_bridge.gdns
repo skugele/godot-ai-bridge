@@ -4,5 +4,5 @@
 
 [resource]
 resource_name = "AiBridge"
-class_name = "AgentComm"
+class_name = "GodotAiBridge"
 library = ExtResource( 1 )

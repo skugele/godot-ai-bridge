@@ -34,7 +34,7 @@ env['bits'] = 64
 opts.Update(env)
 
 env['target_path'] = 'lib/'
-env['target_name'] = 'libgodot-aibridge'
+env['target_name'] = 'libgab'
 
 # Process some arguments
 if env['use_llvm']:
