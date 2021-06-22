@@ -4,11 +4,12 @@ extends Node2D
 
 # Godot AI Bridge (GAB) Variables
 onready var gab = $GabLib  # library reference
-onready var gab_options = {} 
+onready var gab_options = {'publisher_port':10001, 'listener_port':10002}
 
 func _ready():
 	
-	gab.connect(gab_options)
+#	gab.connect(gab_options)
+	gab.connect()
 
 func _process(_delta):
 	for agent in $Agents.get_children():

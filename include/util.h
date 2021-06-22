@@ -7,7 +7,10 @@
 namespace gab {
 
 	inline std::string convert_string(const godot::Variant& v) {
-		return godot::String(v).utf8().get_data();
+		godot::String str = v;
+		// godot::Variant::String(v).utf8().get_data();
+		return str.utf8().get_data();
+
 	}
 
 	inline int64_t convert_int(const godot::Variant& v) {

@@ -4,12 +4,16 @@ using namespace std;
 using namespace gab;
 using json = nlohmann::json;
 
+/* Implementation of GodotAiBridge Class
+ ****************************************/
 GodotAiBridge::GodotAiBridge() : zmq_context() {
 
 }
 
 GodotAiBridge::~GodotAiBridge() {
-
+	delete p_listener;
+	delete p_publisher;
+	delete p_listener_thread;
 }
 
 
@@ -27,7 +31,7 @@ void GodotAiBridge::_init() {
 
 void GodotAiBridge::connect(godot::Variant v_options) {
 
-	if (! is_dictionary_variant(v_options)) {
+	if (v_options != nullptr && ! is_dictionary_variant(v_options)) {
 		std::cerr << "Invalid connect options. Argument must be a dictionary." << std::endl;
 		return;
 	}
@@ -99,7 +103,8 @@ void GodotAiBridge::send(const godot::Variant v_topic, const godot::Variant v_co
 }
 
 
-
+/* Implementation of Listener Class
+ ***********************************/
 Listener::Listener(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port, GodotAiBridge& bridge)
 	: seq_no(0),
 	  bridge(bridge)
@@ -172,7 +177,8 @@ zmq::message_t Listener::create_reply(const uint64_t seq_no, const std::string& 
 }
 
 
-
+/* Implementation of Publisher Class 
+ ************************************/
 Publisher::Publisher(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port)
 	: seq_no(0)
 {
