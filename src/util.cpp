@@ -1,8 +1,8 @@
-#include "util.h"
+#include "godot_util.h"
 
 using json = nlohmann::json;
 
-void gab::marshal_basic_variant(const godot::Variant& value, nlohmann::json& marshaler) {
+void marshal_basic_variant(const godot::Variant& value, nlohmann::json& marshaler) {
 
 	switch (value.get_type()) {
 	case godot::Variant::NIL:
@@ -26,7 +26,10 @@ void gab::marshal_basic_variant(const godot::Variant& value, nlohmann::json& mar
 	}
 }
 
-void gab::marshal_basic_variant_in_array(const godot::Variant& value, nlohmann::json& marshaler) {
+// TODO: Might be able to combine this and previous method by passing a pointer to a function that does the update,
+// in the first case it would be an assignment. In the 2nd case it would be a push_back. The signature of the 
+// function would be func(json element, T value)
+void marshal_basic_variant_in_array(const godot::Variant& value, nlohmann::json& marshaler) {
 
 	switch (value.get_type()) {
 	case godot::Variant::NIL:
@@ -50,7 +53,7 @@ void gab::marshal_basic_variant_in_array(const godot::Variant& value, nlohmann::
 	}
 }
 
-void gab::marshal_array_variant(const godot::Array& array, nlohmann::json& marshaler) {
+void marshal_array_variant(const godot::Array& array, nlohmann::json& marshaler) {
 	for (int i = 0; i < array.size(); i++) {
 		godot::Variant value = array[i];
 
@@ -73,7 +76,7 @@ void gab::marshal_array_variant(const godot::Array& array, nlohmann::json& marsh
 	}
 }
 
-void gab::marshal_dictionary_variant(const godot::Dictionary& dict, nlohmann::json& marshaler) {
+void marshal_dictionary_variant(const godot::Dictionary& dict, nlohmann::json& marshaler) {
 
 	godot::Array keys = dict.keys();
 
@@ -97,7 +100,7 @@ void gab::marshal_dictionary_variant(const godot::Dictionary& dict, nlohmann::js
 	}
 }
 
-void gab::marshal_variant(const godot::Variant& value, nlohmann::json& marshaler) {
+void marshal_variant(const godot::Variant& value, nlohmann::json& marshaler) {
 
 	switch (value.get_type()) {
 	case godot::Variant::DICTIONARY:
@@ -124,8 +127,8 @@ void gab::marshal_variant(const godot::Variant& value, nlohmann::json& marshaler
 	}
 }
 
-godot::Variant gab::unmarshal_to_variant(nlohmann::json& value) {
-	godot::Variant v(NULL);
+godot::Variant unmarshal_to_variant(nlohmann::json& value) {
+	godot::Variant v(0);
 	if (value.is_primitive()) {
 		v = unmarshal_to_basic_variant(value);
 	}
@@ -138,7 +141,7 @@ godot::Variant gab::unmarshal_to_variant(nlohmann::json& value) {
 	return v;
 }
 
-godot::Variant gab::unmarshal_to_basic_variant(nlohmann::json& value) {
+godot::Variant unmarshal_to_basic_variant(nlohmann::json& value) {
 	if (value.is_string()) {
 		return unmarshal_to_string_variant(value);
 	}
@@ -156,12 +159,12 @@ godot::Variant gab::unmarshal_to_basic_variant(nlohmann::json& value) {
 	}
 	else {
 		std::cerr << "unable to unmarshal basic type to variant: type not recognized" << std::endl;
-		return godot::Variant(NULL);
+		return godot::Variant(0);
 	}
 }
 
-godot::Variant gab::unmarshal_to_structured_variant(nlohmann::json& value) {
-	godot::Variant v(NULL);
+godot::Variant unmarshal_to_structured_variant(nlohmann::json& value) {
+	godot::Variant v(0);
 	if (value.is_array()) {
 		v = unmarshal_to_array_variant(value);
 	}
@@ -174,7 +177,7 @@ godot::Variant gab::unmarshal_to_structured_variant(nlohmann::json& value) {
 	return v;
 }
 
-godot::Variant gab::unmarshal_to_array_variant(nlohmann::json& value) {
+godot::Variant unmarshal_to_array_variant(nlohmann::json& value) {
 	godot::Array array;
 	for (json::iterator it = value.begin(); it != value.end(); ++it) {
 		array.push_back(unmarshal_to_variant(*it));
@@ -183,7 +186,7 @@ godot::Variant gab::unmarshal_to_array_variant(nlohmann::json& value) {
 	return array;
 }
 
-godot::Variant gab::unmarshal_to_dictionary_variant(nlohmann::json& value) {
+godot::Variant unmarshal_to_dictionary_variant(nlohmann::json& value) {
 	godot::Dictionary dict;
 	for (auto& kv_pair : value.items()) {
 		auto k = kv_pair.key();

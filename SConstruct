@@ -6,15 +6,15 @@ opts = Variables([], ARGUMENTS)
 # Gets the standard flags CC, CCX, etc.
 env = Environment()
 
-#print(env.Dump())
 
 # Define our options
 opts.Add(EnumVariable('target', "Compilation target", 'release', ['d', 'debug', 'r', 'release']))
 opts.Add(EnumVariable('platform', "Compilation platform", 'windows', ['', 'windows', 'x11', 'linux', 'osx']))
 opts.Add(EnumVariable('p', "Compilation target, alias for 'platform'", '', ['', 'windows', 'x11', 'linux', 'osx']))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
-# opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'C:/Users/seank/workspace/godot/simple-animat-world/godot/gdnative/'))
-# opts.Add(PathVariable('target_name', 'The library name.', 'libagentcomm', PathVariable.PathAccept))
+
+# Updates the environment with the option variables.
+opts.Update(env)
 
 # Local dependency paths, adapt them to your setup
 gdnative_cpp_path = "../godot-cpp/"
@@ -29,9 +29,6 @@ CPPDEFINES = []
 
 # only support 64 at this time.. (DOES 32 bit WORK???)
 env['bits'] = 64
-
-# Updates the environment with the option variables.
-opts.Update(env)
 
 env['target_path'] = 'lib/'
 env['target_name'] = 'libgab'
@@ -68,6 +65,26 @@ elif env['platform'] in ('x11', 'linux'):
         raise ValueError('Requested library bits unsupported: ' + env['bits'])
         
     gdnative_cpp_library += '.linux'
+
+    # paths to dependencies
+    CPPPATH += [
+
+        # libzmq (what about cppzmq???)
+        '/usr/local/include/',
+   
+        # JSON serializer/deserializer
+        '/usr/local/include/nlohmann/',
+    ]
+    
+    LIBPATH += [
+        '/usr/local/lib/',
+    ]
+    
+    LIBS += [
+        'libsodium', # static or dynamic???
+        'libzmq', # static or dynamic???
+    ]
+
     if env['target'] in ('debug', 'd'):
         env.Append(CCFLAGS = ['-fPIC', '-g3','-Og', '-std=c++17'])
     else:
@@ -115,7 +132,6 @@ elif env['platform'] == "windows":
         # libzmqpp
         'zmqpp',  # dynamic lib
         #'zmqpp-static',  # static lib
-    
     ]
     
     # This makes sure to keep the session environment variables on windows,
@@ -142,7 +158,7 @@ CPPPATH += [
     './include/', 
     
     # gdnative cpp headers
-    gdnative_cpp_path + 'godot_headers/', 
+    gdnative_cpp_path + 'godot-headers/', 
     gdnative_cpp_path + 'include/', 
     gdnative_cpp_path + 'include/core/', 
     gdnative_cpp_path + 'include/gen/',
@@ -158,23 +174,17 @@ LIBS += [
     gdnative_cpp_library,    
 ]
 
-CPPDEFINES = [
-    
-]
-
 env.Append(CPPPATH=CPPPATH)
 env.Append(LIBPATH=LIBPATH)
 env.Append(LIBS=LIBS)
-env.Append(CPPDEFINES=CPPDEFINES)
+
+#print(env.Dump())
 
 sources = Glob('src/*.cpp')
 
 library_binary = env['target_path'] + env['target_name']
 library = env.SharedLibrary(target=library_binary, source=sources)
 Default(library)
-
-# test_sources = Glob('test/*.cpp')
-# test_program = env.Program('test', source=sources + test_sources)
 
 # Generates help for the -h scons option.
 Help(opts.GenerateHelpText(env))
