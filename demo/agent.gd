@@ -8,18 +8,22 @@ const ANGULAR_DELTA = 5.0  # change in degrees - used for rotational actions
 # an identifier for this agent
 export var id = 1
 
-# a list of actions that are pending execution
+# a queue of actions that are pending execution
 onready var pending_actions = []
 
 
 func _process(_delta):
+	
+	# removes and executes the oldest pending action from the queue (if one exists)
 	var action = pending_actions.pop_front()
 	if action:
 		execute(action)
 
+# adds an action to the agent's pending_actions queue for later execution
 func add_action(action):
 	pending_actions.push_back(action)
-		
+
+# executes an action
 func execute(action):
 	match action:
 		'up': global_position.y -= LINEAR_DELTA
@@ -31,7 +35,8 @@ func execute(action):
 		
 		# default case: unrecognized actions
 		_: print('unrecogized action: ', action) 
-		
+
+
 func get_state():
 	return {
 		'position' : [global_position.x, global_position.y],

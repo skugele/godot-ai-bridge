@@ -9,6 +9,7 @@ import json
 import argparse
 import sys
 import os
+import time
 
 import zmq  # Python Bindings for ZeroMq (PyZMQ)
 
@@ -26,6 +27,9 @@ ACTION_MAP = {'W': 'up',
               'Q': 'rotate_counterclockwise',
               'E': 'rotate_clockwise'}
 
+verbose = False
+seqno = 1  # current request's sequence number
+
 
 def parse_args():
     """ Parses command line arguments.
@@ -40,6 +44,8 @@ def parse_args():
                         help=f'the IP address of host running the GAB action listener (default: {DEFAULT_HOST})')
     parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
                         help=f'the port number of the GAB action listener (default: {DEFAULT_PORT})')
+    parser.add_argument('--verbose', required=False, action="store_true",
+                        help='increases verbosity (displays requests & replies)')
 
     return parser.parse_args()
 
@@ -71,13 +77,24 @@ def send(connection, request):
     return connection.recv_json()
 
 
+def create_request(data):
+    global seqno
+    header = {
+        'seqno': seqno,
+        'time': round(time.time() * 1000)  # current time in milliseconds
+    }
+
+    return {'header': header, 'data': data}
+
+
 if __name__ == '__main__':
     try:
         args = parse_args()
         connection = connect(host=args.host, port=args.port)
 
         # a global action counter (included in request payload)
-        seqno = 0
+        action_id = 0
+        agent_id = args.id
 
         # MAIN LOOP: receive action via CLI, and send it to GAB action listener
         print('Select an action ID followed by [ENTER]. (All others quit.)')
@@ -86,9 +103,14 @@ if __name__ == '__main__':
             if action not in ACTION_MAP:
                 break
 
-            seqno += 1
+            request = create_request(data={'event':{'type':'action', 'agent': args.id, 'value':ACTION_MAP[action]}})
+            reply = send(connection, request)
 
-            _reply = send(connection, request={'seqno': seqno, 'agent_id': args.id, 'action': ACTION_MAP[action]})
+            if args.verbose:
+                print(f'\t REQUEST: {request}')
+                print(f'\t REPLY: {reply}')
+
+            seqno += 1
 
     except KeyboardInterrupt:
 

@@ -2,7 +2,6 @@
 
 using namespace std;
 using namespace gab;
-using json = nlohmann::json;
 
 /* Implementation of GodotAiBridge Class
  ****************************************/
@@ -81,8 +80,6 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 					std::cerr << "Godot-AI-Bridge: using custom socket options" << std::endl;
 				}
 			}
-
-			// TODO: display the resulting socket options for the publisher and listener if verbosity >= 1
 		}
 			
 		p_publisher = new Publisher(zmq_context, publisher_options, publisher_port);
@@ -121,11 +118,17 @@ void GodotAiBridge::notify(const zmq::message_t& request, std::string& parse_err
 	delete[] buffer;
 }
 
-void GodotAiBridge::send(const godot::Variant v_topic, const godot::Variant v_content)
+void GodotAiBridge::send(const godot::Variant v_topic, const godot::Variant v_data)
 {
-	// Convert godot data types to std::strings
+	json marshaler;
+	json& header = marshaler[MSG_HEADER];
+	json& data = marshaler[MSG_DATA];
+
+	construct_message_header(header, p_publisher->get_seqno());
+	marshal_variant(v_data, data);
+
 	std::string topic = convert_string(v_topic);
-	std::string content = serialize(v_content, p_publisher->get_seq_no());
+	std::string content = marshaler.dump();
 
 	p_publisher->publish(topic, content);
 }
@@ -134,7 +137,7 @@ void GodotAiBridge::send(const godot::Variant v_topic, const godot::Variant v_co
 /* Implementation of Listener Class
  ***********************************/
 Listener::Listener(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port, GodotAiBridge& bridge)
-	: seq_no(1),
+	: seqno(1),
 	  bridge(bridge)
 {
 	// initialize socket
@@ -166,29 +169,38 @@ void Listener::operator()()
 void Listener::receive(const zmq::message_t& request)
 {
 	if (verbosity >= 2) {
-		std::cerr << "Godot-AI-Bridge: listener received request (seqno: " << seq_no << ") " << std::endl;
+		std::cerr << "Godot-AI-Bridge: listener received request (seqno: " << seqno << ") " << std::endl;
 	}
 
 	if (verbosity >= 3) {
 		std::cerr << "Godot-AI-Bridge: request contents -> " << (char*)request.data() << std::endl;
 	}
 
-	// TODO: split parsing and signal generation
 	std::string parse_errors = "";
 	bridge.notify(request, parse_errors);
 
-	zmq::message_t reply = create_reply(seq_no, parse_errors);
+	zmq::message_t reply = create_reply(seqno, parse_errors);
+
+	if (verbosity >= 2) {
+		std::cerr << "Godot-AI-Bridge: listener sending reply (seqno: " << seqno << ") " << std::endl;
+	}
+
+	if (verbosity >= 3) {
+		std::cerr << "Godot-AI-Bridge: reply contents -> " << (char*)reply.data() << std::endl;
+	}
+
 	p_socket->send(reply);
-	seq_no++;
+
+	seqno++;
 }
 
-zmq::message_t Listener::create_reply(const uint64_t seq_no, const std::string& parse_errors)
+zmq::message_t Listener::create_reply(const uint64_t seqno, const std::string& parse_errors)
 {
-	nlohmann::json marshaler;
+	json marshaler;
 	json& header = marshaler[MSG_HEADER];
 	json& data = marshaler[MSG_DATA];
 
-	header[SEQNO] = seq_no;
+	construct_message_header(header, seqno);
 
 	// SUCCESS reply
 	if (parse_errors.empty())
@@ -215,7 +227,7 @@ zmq::message_t Listener::create_reply(const uint64_t seq_no, const std::string& 
 /* Implementation of Publisher Class 
  ************************************/
 Publisher::Publisher(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port)
-	: seq_no(1)
+	: seqno(1)
 {
 	// initialize socket
 	p_socket = new zmq::socket_t(zmq_context, ZMQ_PUB);
@@ -237,7 +249,7 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 		construct_message(message, topic, content);
 
 		if (verbosity >= 2) {
-			std::cerr << "Godot-AI-Bridge: publishing message (seqno: " << seq_no << ", topic: " << topic << ") " << std::endl;
+			std::cerr << "Godot-AI-Bridge: publishing message (seqno: " << seqno << ", topic: " << topic << ") " << std::endl;
 		}
 
 		if (verbosity >= 3) {
@@ -245,7 +257,7 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 		}
 
 		p_socket->send(message);
-		seq_no++;
+		seqno++;
 	}
 	catch (exception& e)
 	{
@@ -253,7 +265,26 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 	}
 }
 
-uint64_t Publisher::get_seq_no()
+void Publisher::construct_message(zmq::message_t& msg, const std::string& topic, const std::string& payload) 
 {
-	return seq_no;
+	char* p_buffer = (char*)msg.data();
+
+	// add topic to buffer
+	memcpy(p_buffer, topic.c_str(), topic.length());
+
+	// add space
+	p_buffer[topic.length()] = ' ';
+
+	// add message payload to buffer
+	memcpy(p_buffer + topic.length() + 1, payload.c_str(), payload.length());
+}
+
+size_t Publisher::get_message_length(const std::string& topic, const std::string& msg) 
+{
+	return topic.length() + msg.length() + 1; // additional character for space between topic and json
+}
+
+uint64_t Publisher::get_seqno()
+{
+	return seqno;
 }

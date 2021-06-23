@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <thread>
 #include <cerrno>
+#include <chrono>
 
 // Godot includes
 #include <Godot.hpp>
@@ -17,21 +18,24 @@
 
 // GodotAiBridge includes
 #include "util.h"
-#include "msg.h"
+//#include "msg.h"
 
 namespace gab {
+
+	using json = nlohmann::json;
+
 	// forward declarations
 	class GodotAiBridge;
 	class Listener;
 	class Publisher;
 
-	// constants
+	// constants - connection related
 	static const int DEFAULT_PUBLISHER_PORT = 10001;  // this port will be used for the publisher unless otherwise specified in Godot socket_options
 	static const int DEFAULT_LISTENER_PORT = 10002;  // this port will be used for the listener unless otherwise specified in Godot socket_options
 
-	static const std::map<int, int> DEFAULT_PUBLISHER_OPTIONS = { 
-		{ZMQ_SNDHWM, 10},  // send high watermark (messages dropped when high watermark exceeded)
-		{ZMQ_SNDTIMEO, 250},  // send timeout in milliseconds
+	static const std::map<int, int> DEFAULT_PUBLISHER_OPTIONS = {
+	{ZMQ_SNDHWM, 10},  // send high watermark (messages dropped when high watermark exceeded)
+	{ZMQ_SNDTIMEO, 250},  // send timeout in milliseconds
 	};
 
 	static const std::map<int, int> DEFAULT_LISTENER_OPTIONS = {
@@ -42,6 +46,14 @@ namespace gab {
 		{ZMQ_REQ_CORRELATE, 1}, // adds extra frame to requests and replies for matching purposes
 
 	};
+
+	// constants - message elements
+	static const char* MSG_HEADER = "header";
+	static const char* MSG_DATA = "data";
+
+	// constants - header elements
+	static const char* SEQNO = "seqno";
+	static const char* TIME = "time";
 
 	// shared verbosity variable
 	static int verbosity = 0;
@@ -54,11 +66,11 @@ namespace gab {
 	private:
 		zmq::socket_t* p_socket;  // ZeroMq socket backing this connection
 		uint16_t port;  // network port number used for socket connection
-		uint64_t seq_no;  // request sequence numbers
+		uint64_t seqno;  // request sequence numbers
 
 		GodotAiBridge& bridge;  // used to communicate with Godot engine (e.g., sending signals)
 
-		zmq::message_t create_reply(const uint64_t seq_no, const std::string& parse_errors);
+		zmq::message_t create_reply(const uint64_t seqno, const std::string& parse_errors);
 	public:
 
 		Listener(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port, GodotAiBridge& bridge);
@@ -75,13 +87,16 @@ namespace gab {
 	private:
 		zmq::socket_t* p_socket;  // ZeroMq socket backing this connection
 		uint16_t port;  // network port number used for socket connection
-		uint64_t seq_no;  // published message sequence numbers
+		uint64_t seqno;  // published message sequence numbers
+
+		void construct_message(zmq::message_t& msg, const std::string& topic, const std::string& payload);
+		size_t get_message_length(const std::string& topic, const std::string& msg);
 
 	public:
 		Publisher(zmq::context_t& zmq_context, std::map<int, int> socket_options, uint16_t port);
 
 		void publish(const std::string& topic, const std::string& content);
-		uint64_t get_seq_no();
+		uint64_t get_seqno();
 	};
 
 	/* GodotAiBridge Class (subclass of godot::Node)
@@ -114,7 +129,7 @@ namespace gab {
 
 		// GDNative exposed methods
 		void connect(godot::Variant v_options);  // initializes the network sockets and listener threads. operation can be customized via user supplied options.
-		void send(const godot::Variant v_topic, const godot::Variant v_content);  // sends a message from Godot engine to external clients on the specified message topic.
+		void send(const godot::Variant v_topic, const godot::Variant v_data);  // sends a message from Godot engine to external clients on the specified message topic.
 		void notify(const zmq::message_t& request, std::string& parse_errors);  // emits a signal to Godot along with the requested event details
 	};
 
@@ -156,4 +171,26 @@ namespace gab {
 	inline std::string construct_endpoint(int port) {
 		return "tcp://*:" + std::to_string(port);
 	}
+
+	inline void construct_message_header(json& marshaler, uint64_t seqno)
+	{
+		using std::chrono::duration_cast;
+		using std::chrono::system_clock;
+		using std::chrono::milliseconds;		
+
+		marshaler[SEQNO] = seqno;
+		marshaler[TIME] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+	}
+
+	//inline std::string serialize(const godot::Variant v_payload, uint64_t seqno) {
+	//	json marshaler;
+
+	//	json& header = marshaler[MSG_HEADER];
+	//	json& data = marshaler[MSG_DATA];
+
+	//	construct_message_header(header, seqno);
+	//	marshal_variant(v_payload, data);
+
+	//	return marshaler.dump();
+	//}
 };
