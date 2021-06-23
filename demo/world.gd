@@ -7,19 +7,20 @@ extends Node2D
 ###################################
 onready var gab = $GabLib  # library reference
 onready var gab_options = {
-	'publisher_port':10003, # specifies alternate port - default port is 10001
-	'listener_port':10004, # specifies alternate port - default port is 10002
+	'publisher_port': 10003, # specifies alternate port - default port is 10001
+	'listener_port': 10004, # specifies alternate port - default port is 10002
 	
 	# supported socket options (for advanced users - see ZeroMQ documentation for details)
 	'socket_options': {
-		'ZMQ_RCVHWM': 10, # receive highwater mark
-		'ZMQ_RCVTIMEO': 50, # timeout on receive I/O blocking
-		'ZMQ_SNDHWM': 10, # send highwater mark
-		'ZMQ_SNDTIMEO': 50, # timeout on send I/O blocking
-		'ZMQ_CONFLATE': 0 # only keep last message in send/receive queues (others are dropped)
+		'ZMQ_RCVHWM': 10,  # receive highwater mark
+		'ZMQ_RCVTIMEO': 50,  # timeout on receive I/O blocking
+		'ZMQ_SNDHWM': 10,  # send highwater mark
+		'ZMQ_SNDTIMEO': 50,  # timeout on send I/O blocking
+		'ZMQ_CONFLATE': 0  # only keep last message in send/receive queues (others are dropped)
 	},
 	
-	'verbosity': 3 # the higher this number, the more verbose Godot-AI-Bridge's output
+	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
+	'verbosity': 1   # supported values (-1=FATAL; 0=ERROR; 1=INFO; 2=WARNING; 3=DEBUG; 4=TRACE)
 }
 
 
@@ -56,11 +57,12 @@ func _on_publish_state():
 		# given a "header" element containing a unique sequence numbers (seqno) and timestamp in milliseconds
 		var msg = agent.get_state()
 		
+		# broadcasts the message to all clients
 		gab.send(topic, msg)
 	
 # signal handler for Godot-AI-Bridge's "event_requested" signal
 func _on_event_requested(event_details):
-	print('Godot: event request received -> "%s"' % event_details)
+	print('Godot Environment: event request received -> "%s"' % event_details)
 
 	var event = event_details['data']['event']	
 	match event['type']:

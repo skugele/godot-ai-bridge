@@ -18,7 +18,6 @@
 
 // GodotAiBridge includes
 #include "util.h"
-//#include "msg.h"
 
 namespace gab {
 
@@ -57,6 +56,13 @@ namespace gab {
 
 	// shared verbosity variable
 	static int verbosity = 0;
+
+	// verbosity levels
+	static int ERROR = 0;
+	static int INFO = 1;
+	static int WARNING = 2;
+	static int DEBUG = 3;
+	static int TRACE = 4;
 
 	/* Listener Class
 	* 
@@ -181,16 +187,4 @@ namespace gab {
 		marshaler[SEQNO] = seqno;
 		marshaler[TIME] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	}
-
-	//inline std::string serialize(const godot::Variant v_payload, uint64_t seqno) {
-	//	json marshaler;
-
-	//	json& header = marshaler[MSG_HEADER];
-	//	json& data = marshaler[MSG_DATA];
-
-	//	construct_message_header(header, seqno);
-	//	marshal_variant(v_payload, data);
-
-	//	return marshaler.dump();
-	//}
 };

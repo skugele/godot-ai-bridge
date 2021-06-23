@@ -10,9 +10,14 @@ GodotAiBridge::GodotAiBridge() : zmq_context() {
 }
 
 GodotAiBridge::~GodotAiBridge() {
-	delete p_listener;
-	delete p_publisher;
-	delete p_listener_thread;
+	if (p_listener != nullptr)
+		delete p_listener;
+
+	if (p_publisher != nullptr)
+		delete p_publisher;
+
+	if (p_listener_thread != nullptr)
+		delete p_listener_thread;
 }
 
 
@@ -47,7 +52,7 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 			if (option_dict.has(VERBOSITY)) {
 				verbosity = (int)convert_int(option_dict[VERBOSITY]);
 
-				if (verbosity >= 1) {
+				if (verbosity >= DEBUG) {
 					std::cerr << "Godot-AI-Bridge: verbosity set to " << verbosity << std::endl;
 				}
 			}
@@ -55,7 +60,7 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 			if (option_dict.has(PUBLISHER_PORT)) {
 				publisher_port = (int)convert_int(option_dict[PUBLISHER_PORT]);
 
-				if (verbosity >= 1) {
+				if (verbosity >= DEBUG) {
 					std::cerr << "Godot-AI-Bridge: setting publisher port to " << publisher_port << std::endl;
 				}
 			}
@@ -63,7 +68,7 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 			if (option_dict.has(LISTENER_PORT)) {
 				listener_port = (int)convert_int(option_dict[LISTENER_PORT]);
 
-				if (verbosity >= 1) {
+				if (verbosity >= DEBUG) {
 					std::cerr << "Godot-AI-Bridge: setting listener port to " << listener_port << std::endl;
 				}
 			}
@@ -76,7 +81,7 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 					map_options(socket_opts, listener_options);
 				}
 
-				if (verbosity >= 1) {
+				if (verbosity >= DEBUG) {
 					std::cerr << "Godot-AI-Bridge: using custom socket options" << std::endl;
 				}
 			}
@@ -90,7 +95,7 @@ void GodotAiBridge::connect(godot::Variant v_options) {
 	}
 	catch (exception& e)
 	{
-		std::cerr << "Godot-AI-Bridge: encountered exception during call to \"connect\" -> " << e.what() << std::endl;
+		std::cerr << "Godot-AI-Bridge: encountered fatal exception during call to \"connect\" -> " << e.what() << std::endl;
 	}
 }
 
@@ -100,7 +105,7 @@ void GodotAiBridge::notify(const zmq::message_t& request, std::string& parse_err
 	memcpy(buffer, request.data(), request.size());
 	buffer[request.size()] = '\0';
 
-	if (verbosity >= 2) {
+	if (verbosity >= DEBUG) {
 		std::cout << "Godot-AI-Bridge: emitting \"event_requested\" signal to Godot" << std::endl;
 	}
 
@@ -111,7 +116,9 @@ void GodotAiBridge::notify(const zmq::message_t& request, std::string& parse_err
 		emit_signal("event_requested", v);
 	}
 	catch (const json::parse_error& e) {
-		std::cerr << "Godot-AI-Bridge: errors occurred when parsing request -> " << e.what() << std::endl;
+		if (verbosity >= ERROR) {
+			std::cerr << "Godot-AI-Bridge: errors occurred when parsing request -> " << e.what() << std::endl;
+		}
 		parse_errors = e.what();
 	}
 
@@ -149,12 +156,17 @@ Listener::Listener(zmq::context_t& zmq_context, std::map<int, int> socket_option
 	// bind socket connection
 	std::string endpoint = "tcp://*:" + std::to_string(port);
 	p_socket->bind(endpoint);
-	std::cerr << "Godot-AI-Bridge: listener connected to " << endpoint << std::endl;
+
+	if (verbosity >= INFO) {
+		std::cerr << "Godot-AI-Bridge: listener connected to " << endpoint << std::endl;
+	}
 }
 
 void Listener::operator()()
 {
-	std::cerr << "Godot-AI-Bridge: listener receiving requests" << std::endl;
+	if (verbosity >= INFO) {
+		std::cerr << "Godot-AI-Bridge: listener receiving requests" << std::endl;
+	}
 
 	for (;;) {
 		zmq::message_t request;
@@ -168,11 +180,11 @@ void Listener::operator()()
 
 void Listener::receive(const zmq::message_t& request)
 {
-	if (verbosity >= 2) {
+	if (verbosity >= DEBUG) {
 		std::cerr << "Godot-AI-Bridge: listener received request (seqno: " << seqno << ") " << std::endl;
 	}
 
-	if (verbosity >= 3) {
+	if (verbosity >= TRACE) {
 		std::cerr << "Godot-AI-Bridge: request contents -> " << (char*)request.data() << std::endl;
 	}
 
@@ -181,11 +193,11 @@ void Listener::receive(const zmq::message_t& request)
 
 	zmq::message_t reply = create_reply(seqno, parse_errors);
 
-	if (verbosity >= 2) {
+	if (verbosity >= DEBUG) {
 		std::cerr << "Godot-AI-Bridge: listener sending reply (seqno: " << seqno << ") " << std::endl;
 	}
 
-	if (verbosity >= 3) {
+	if (verbosity >= TRACE) {
 		std::cerr << "Godot-AI-Bridge: reply contents -> " << (char*)reply.data() << std::endl;
 	}
 
@@ -238,7 +250,10 @@ Publisher::Publisher(zmq::context_t& zmq_context, std::map<int, int> socket_opti
 	// bind socket connection
 	std::string endpoint = "tcp://*:" + std::to_string(port);
 	p_socket->bind(endpoint);
-	std::cerr << "Godot-AI-Bridge: publisher connected to " << endpoint << std::endl;
+
+	if (verbosity >= INFO) {
+		std::cerr << "Godot-AI-Bridge: publisher connected to " << endpoint << std::endl;
+	}
 }
 
 void Publisher::publish(const std::string& topic, const std::string& content)
@@ -248,11 +263,11 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 		zmq::message_t message(get_message_length(topic, content));
 		construct_message(message, topic, content);
 
-		if (verbosity >= 2) {
+		if (verbosity >= DEBUG) {
 			std::cerr << "Godot-AI-Bridge: publishing message (seqno: " << seqno << ", topic: " << topic << ") " << std::endl;
 		}
 
-		if (verbosity >= 3) {
+		if (verbosity >= TRACE) {
 			std::cerr << "Godot-AI-Bridge: message contents -> " << content << std::endl;
 		}
 
@@ -261,7 +276,9 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 	}
 	catch (exception& e)
 	{
-		std::cout << "Godot-AI-Bridge: encountered exception when publishing message -> " << e.what() << std::endl;
+		if (verbosity >= ERROR) {
+			std::cout << "Godot-AI-Bridge: encountered exception when publishing message -> " << e.what() << std::endl;
+		}
 	}
 }
 
