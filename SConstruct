@@ -79,8 +79,8 @@ elif env['platform'] in ('x11', 'linux'):
     ]
     
     LIBS += [
-        'libsodium', # static or dynamic???
-        'libzmq', # static or dynamic???
+        'libsodium',
+        'libzmq',
     ]
 
     if env['target'] in ('debug', 'd'):

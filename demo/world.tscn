@@ -18,4 +18,5 @@ id = 2
 
 [node name="GabLib" type="Node" parent="."]
 script = ExtResource( 3 )
+
 [connection signal="event_requested" from="GabLib" to="." method="_on_event_requested"]
