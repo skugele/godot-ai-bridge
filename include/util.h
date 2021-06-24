@@ -79,7 +79,7 @@ namespace gab {
 	}
 
 	inline godot::Variant unmarshal_to_nil_variant(nlohmann::json& value) {
-		return godot::Variant(NULL);
+		return godot::Variant(0);
 	}
 
 	godot::Variant unmarshal_to_variant(nlohmann::json& value);
