@@ -20,7 +20,7 @@ onready var gab_options = {
 	},
 	
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 1   # supported values (-1=FATAL; 0=ERROR; 1=INFO; 2=WARNING; 3=DEBUG; 4=TRACE)
+	'verbosity': 3   # supported values (-1=FATAL; 0=ERROR; 1=INFO; 2=WARNING; 3=DEBUG; 4=TRACE)
 }
 
 

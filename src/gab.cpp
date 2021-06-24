@@ -171,8 +171,8 @@ void Listener::operator()()
 	for (;;) {
 		zmq::message_t request;
 
-		//  wait for next request from client
-		if (p_socket->recv(&request)) {
+		// wait for next request from client
+		if (p_socket->recv(request, zmq::recv_flags::none)) {
 			receive(request);
 		}
 	}
@@ -201,7 +201,7 @@ void Listener::receive(const zmq::message_t& request)
 		std::cerr << "Godot-AI-Bridge: reply contents -> " << (char*)reply.data() << std::endl;
 	}
 
-	p_socket->send(reply);
+	p_socket->send(reply, zmq::send_flags::none);
 
 	seqno++;
 }
@@ -271,7 +271,7 @@ void Publisher::publish(const std::string& topic, const std::string& content)
 			std::cerr << "Godot-AI-Bridge: message contents -> " << content << std::endl;
 		}
 
-		p_socket->send(message);
+		p_socket->send(message, zmq::send_flags::none);
 		seqno++;
 	}
 	catch (exception& e)
@@ -304,4 +304,33 @@ size_t Publisher::get_message_length(const std::string& topic, const std::string
 uint64_t Publisher::get_seqno()
 {
 	return seqno;
+}
+
+// Maps socket options from Godot Dictionary to a std::map usable by ZeroMQ
+void gab::map_options(const godot::Dictionary& v_options, std::map<int, int>& options_out)
+{
+	// Map from Godot's String options to ZMQ options. The keys in this map are the complete list of connection options available from Godot.
+	static std::map<godot::String, int> GODOT_OPTION_TO_ZMQ_MAP = {
+		{godot::String("ZMQ_RCVHWM"), ZMQ_RCVHWM},
+		{godot::String("ZMQ_RCVTIMEO"), ZMQ_RCVTIMEO},
+		{godot::String("ZMQ_SNDHWM"), ZMQ_SNDHWM},
+		{godot::String("ZMQ_SNDTIMEO"), ZMQ_SNDTIMEO},
+		{godot::String("ZMQ_CONFLATE"), ZMQ_CONFLATE},
+	};
+
+	// iterate over Godot dictionary keys
+	godot::Array keys = v_options.keys();
+	for (int i = 0; i < keys.size(); i++)
+	{
+		godot::String key = keys[i];
+
+		// if Godot key matches known ZMQ key, then set value in output map
+		auto search = GODOT_OPTION_TO_ZMQ_MAP.find(key);
+		if (search != GODOT_OPTION_TO_ZMQ_MAP.end()) {
+			int zmq_option = search->second;
+			int zmq_value = (int)convert_int(v_options[key]);
+
+			options_out[zmq_option] = zmq_value;
+		}
+	}
 }
