@@ -65,8 +65,8 @@ namespace gab {
 
 	// verbosity levels
 	static int ERROR = 0;
-	static int INFO = 1;
-	static int WARNING = 2;
+	static int WARNING = 1;
+	static int INFO = 2;
 	static int DEBUG = 3;
 	static int TRACE = 4;
 
