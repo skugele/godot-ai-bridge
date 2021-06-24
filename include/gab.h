@@ -1,5 +1,11 @@
 #pragma once
 
+#if defined(_WIN32)
+	#pragma comment(lib, "ws2_32.lib")
+	#pragma comment(lib, "Advapi32.lib")
+	#pragma comment(lib, "Iphlpapi.lib")
+#endif
+
 #include <sstream>
 #include <stdexcept>
 #include <stdio.h>

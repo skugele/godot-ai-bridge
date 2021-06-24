@@ -105,6 +105,7 @@ elif env['platform'] == "windows":
     CPPPATH += [
    
         # libzmq
+        # 'C:/opt/vcpkg/packages/zeromq_x64-windows-static/include',
         'C:/opt/libzmq-src/include/',
    
         # cppzmq
@@ -117,28 +118,35 @@ elif env['platform'] == "windows":
     LIBPATH += [
       
         # libzmq
-        'C:/opt/libzmq/bin/Release/', 
+        # 'C:/opt/libzmq/bin/Release/', 
         'C:/opt/libzmq/lib/Release/',
 
         # libzmqpp
         'C:/opt/libzmqpp/Release/',
+        
+        # libsodium
+        #'C:/opt/libsodium/bin/x64/Release/v142/static/'
+        
     ]
     
     LIBS += [
         # libzmq
-        'libzmq-v142-mt-4_3_5',  # dynamic lib?
-        #'libzmq-v142-mt-s-4_3_5',  # static?
+        # 'libzmq-v142-mt-4_3_5',  # dynamic lib?
+        'libzmq-v142-mt-s-4_3_5',  # static?
 
         # libzmqpp
-        'zmqpp',  # dynamic lib
+        # 'zmqpp',  # dynamic lib
         #'zmqpp-static',  # static lib
+        
+        # libsodium
+        #'libsodium'
     ]
     
     # This makes sure to keep the session environment variables on windows,
     # that way you can run scons in a vs 2017 prompt and it will find all the required tools
     env.Append(ENV = os.environ)
 
-    env.Append(CCFLAGS = ['-DWIN32', '-D_WIN32', '-D_WINDOWS', '-W3', '-GR', '-D_CRT_SECURE_NO_WARNINGS'])
+    env.Append(CCFLAGS = ['-DWIN32', '-D_WIN32', '-D_WINDOWS', '-DZMQ_STATIC', '-W3', '-GR', '-D_CRT_SECURE_NO_WARNINGS'])
     if env['target'] in ('debug', 'd'):
         env.Append(CCFLAGS = ['-EHsc', '-D_DEBUG', '-MDd'])
     else:
@@ -180,7 +188,7 @@ env.Append(LIBS=LIBS)
 
 #print(env.Dump())
 
-sources = Glob('src/*.cpp')
+sources = Glob('src/*.cpp')# + ['C:/opt/vcpkg/packages/zeromq_x64-windows-static/lib/libzmq-mt-s-4_3_4.lib']
 
 library_binary = env['target_path'] + env['target_name']
 library = env.SharedLibrary(target=library_binary, source=sources)
