@@ -27,7 +27,7 @@ LIBPATH = []
 LIBS = []
 CPPDEFINES = []
 
-# only support 64 at this time.. (DOES 32 bit WORK???)
+# only support 64 at this time..
 env['bits'] = 64
 
 env['target_path'] = 'lib/'
@@ -118,20 +118,13 @@ elif env['platform'] == "windows":
         'C:/opt/libzmq/lib/Release/',
 
         # libzmqpp
-        'C:/opt/libzmqpp/Release/',
+        # 'C:/opt/libzmqpp/Release/',
     ]
     
     LIBS += [
         # libzmq
         # 'libzmq-v142-mt-4_3_5',  # dynamic lib
         'libzmq-v142-mt-s-4_3_5',  # static lib
-
-        # libzmqpp
-        # 'zmqpp',  # dynamic lib
-        #'zmqpp-static',  # static lib
-        
-        # libsodium
-        #'libsodium'
     ]
     
     # This makes sure to keep the session environment variables on windows,
