@@ -68,8 +68,6 @@ elif env['platform'] in ('x11', 'linux'):
 
     # paths to dependencies
     CPPPATH += [
-
-        # libzmq (what about cppzmq???)
         '/usr/local/include/',
    
         # JSON serializer/deserializer
@@ -105,7 +103,6 @@ elif env['platform'] == "windows":
     CPPPATH += [
    
         # libzmq
-        # 'C:/opt/vcpkg/packages/zeromq_x64-windows-static/include',
         'C:/opt/libzmq-src/include/',
    
         # cppzmq
@@ -118,21 +115,16 @@ elif env['platform'] == "windows":
     LIBPATH += [
       
         # libzmq
-        # 'C:/opt/libzmq/bin/Release/', 
         'C:/opt/libzmq/lib/Release/',
 
         # libzmqpp
         'C:/opt/libzmqpp/Release/',
-        
-        # libsodium
-        #'C:/opt/libsodium/bin/x64/Release/v142/static/'
-        
     ]
     
     LIBS += [
         # libzmq
-        # 'libzmq-v142-mt-4_3_5',  # dynamic lib?
-        'libzmq-v142-mt-s-4_3_5',  # static?
+        # 'libzmq-v142-mt-4_3_5',  # dynamic lib
+        'libzmq-v142-mt-s-4_3_5',  # static lib
 
         # libzmqpp
         # 'zmqpp',  # dynamic lib
@@ -188,7 +180,7 @@ env.Append(LIBS=LIBS)
 
 #print(env.Dump())
 
-sources = Glob('src/*.cpp')# + ['C:/opt/vcpkg/packages/zeromq_x64-windows-static/lib/libzmq-mt-s-4_3_4.lib']
+sources = Glob('src/*.cpp')
 
 library_binary = env['target_path'] + env['target_name']
 library = env.SharedLibrary(target=library_binary, source=sources)
