@@ -2,6 +2,16 @@
 
 using json = nlohmann::json;
 
+// this may need to change if Godot's character encoding scheme changes
+using convert_type = std::codecvt_utf8<wchar_t>;
+
+std::string gab::convert_string(const godot::String& v) {
+	// wstring to string converter
+	static std::wstring_convert<convert_type, wchar_t> converter;
+
+	return converter.to_bytes(v.unicode_str());
+}
+
 void gab::marshal_basic_variant(const godot::Variant& value, nlohmann::json& marshaler) {
 
 	switch (value.get_type()) {
@@ -21,14 +31,12 @@ void gab::marshal_basic_variant(const godot::Variant& value, nlohmann::json& mar
 		marshaler = convert_string(value);
 		break;
 	default:
-		std::cerr << "Ignoring unsupported variant type" << std::endl;
+		// TODO: Replace with an exception?
+		std::cerr << "Unrecognized variant type: " << value.get_type() << std::endl;
 		break;
 	}
 }
 
-// TODO: Might be able to combine this and previous method by passing a pointer to a function that does the update,
-// in the first case it would be an assignment. In the 2nd case it would be a push_back. The signature of the 
-// function would be func(json element, T value)
 void gab::marshal_basic_variant_in_array(const godot::Variant& value, nlohmann::json& marshaler) {
 
 	switch (value.get_type()) {
@@ -48,8 +56,7 @@ void gab::marshal_basic_variant_in_array(const godot::Variant& value, nlohmann::
 		marshaler.push_back(convert_string(value));
 		break;
 	default:
-		std::cerr << "Ignoring unsupported variant type" << std::endl;
-		break;
+		GodotAiBridgeException("unrecognized variant type: " + std::to_string(value.get_type()));
 	}
 }
 
@@ -86,18 +93,13 @@ void gab::marshal_dictionary_variant(const godot::Dictionary& dict, nlohmann::js
 		godot::Variant value = dict[key];
 
 		json& element = marshaler[convert_string(key)];
-
-		if (is_basic_variant(value)) {
-			marshal_basic_variant(value, element);
-		}
-		else if (is_array_variant(value)) {
-			marshal_array_variant(value, element);
-		}
-		else if (is_dictionary_variant(value)) {
-			// recursive call
-			marshal_dictionary_variant(value, element);
-		}
+		marshal_variant(value, element);
 	}
+}
+
+void gab::marshal_pool_variant(const godot::Variant& array, nlohmann::json& marshaler)
+{
+	marshal_array_variant(array, marshaler);
 }
 
 void gab::marshal_variant(const godot::Variant& value, nlohmann::json& marshaler) {
@@ -122,8 +124,19 @@ void gab::marshal_variant(const godot::Variant& value, nlohmann::json& marshaler
 		marshal_basic_variant(value, marshaler);
 		break;
 	}
-	default:
+	case godot::Variant::POOL_BYTE_ARRAY:
+	case godot::Variant::POOL_INT_ARRAY:
+	case godot::Variant::POOL_REAL_ARRAY:
+	case godot::Variant::POOL_STRING_ARRAY:
+	case godot::Variant::POOL_VECTOR2_ARRAY:
+	case godot::Variant::POOL_VECTOR3_ARRAY:
+	case godot::Variant::POOL_COLOR_ARRAY:
+	{
+		marshal_pool_variant(value, marshaler);
 		break;
+	}
+	default:
+		throw GodotAiBridgeException("unrecognized variant type: " + std::to_string(value.get_type()));
 	}
 }
 
@@ -136,7 +149,7 @@ godot::Variant gab::unmarshal_to_variant(nlohmann::json& value) {
 		v = unmarshal_to_structured_variant(value);
 	}
 	else {
-		std::cerr << "unable to unmarshal to variant: type not recognized" << std::endl;
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
 	}
 	return v;
 }
@@ -158,8 +171,7 @@ godot::Variant gab::unmarshal_to_basic_variant(nlohmann::json& value) {
 		return unmarshal_to_bool_variant(value);
 	}
 	else {
-		std::cerr << "unable to unmarshal basic type to variant: type not recognized" << std::endl;
-		return godot::Variant(0);
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
 	}
 }
 
@@ -172,7 +184,7 @@ godot::Variant gab::unmarshal_to_structured_variant(nlohmann::json& value) {
 		v = unmarshal_to_dictionary_variant(value);
 	}
 	else {
-		std::cerr << "unable to unmarshal structured type to variant: type not recognized" << std::endl;
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
 	}
 	return v;
 }

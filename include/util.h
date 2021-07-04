@@ -1,17 +1,21 @@
 #pragma once
 
-#include <Godot.hpp>
+#include <locale>
+#include <codecvt>
 #include <string.h>
+
+// "JSON for Modern C++" (see https://github.com/nlohmann/json)
 #include <nlohmann/json.hpp>
+
+// Godot includes
+#include <Godot.hpp>
+
+// GodotAiBridge includes
+#include "share.h"
 
 namespace gab {
 
-	inline std::string convert_string(const godot::Variant& v) {
-		godot::String str = v;
-		// godot::Variant::String(v).utf8().get_data();
-		return str.utf8().get_data();
-
-	}
+	std::string convert_string(const godot::String& v);
 
 	inline int64_t convert_int(const godot::Variant& v) {
 		return int64_t(v);
@@ -43,6 +47,22 @@ namespace gab {
 		}
 	}
 
+	inline bool is_pool_variant(const godot::Variant& v) {
+		switch (v.get_type()) {
+		case godot::Variant::POOL_BYTE_ARRAY:
+		case godot::Variant::POOL_INT_ARRAY:
+		case godot::Variant::POOL_REAL_ARRAY:
+		case godot::Variant::POOL_STRING_ARRAY:
+		case godot::Variant::POOL_VECTOR2_ARRAY:
+		case godot::Variant::POOL_VECTOR3_ARRAY:
+		case godot::Variant::POOL_COLOR_ARRAY:
+			return true;
+			break;
+		default:
+			return false;
+		}
+	}
+
 	inline bool is_array_variant(const godot::Variant& v) {
 		return v.get_type() == godot::Variant::ARRAY;
 	}
@@ -56,6 +76,8 @@ namespace gab {
 
 	void marshal_array_variant(const godot::Array& dict, nlohmann::json& marshaler);
 	void marshal_dictionary_variant(const godot::Dictionary& dict, nlohmann::json& marshaler);
+
+	void marshal_pool_variant(const godot::Variant& array, nlohmann::json& marshaler);
 
 	void marshal_variant(const godot::Variant& value, nlohmann::json& marshaler);
 

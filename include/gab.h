@@ -24,6 +24,7 @@
 
 // GodotAiBridge includes
 #include "util.h"
+#include "share.h"
 
 namespace gab {
 

@@ -121,6 +121,11 @@ void GodotAiBridge::notify(const zmq::message_t& request, std::string& parse_err
 		}
 		parse_errors = e.what();
 	}
+	catch (GodotAiBridgeException& e) {
+		if (verbosity >= ERROR) {
+			std::cerr << "Godot-AI-Bridge: errors occurred when receiving event request -> " << e.what() << std::endl;
+		}
+	}
 
 	delete[] buffer;
 }
@@ -131,13 +136,20 @@ void GodotAiBridge::send(const godot::Variant v_topic, const godot::Variant v_da
 	json& header = marshaler[MSG_HEADER];
 	json& data = marshaler[MSG_DATA];
 
-	construct_message_header(header, p_publisher->get_seqno());
-	marshal_variant(v_data, data);
+	try {
+		construct_message_header(header, p_publisher->get_seqno());
+		marshal_variant(v_data, data);
 
-	std::string topic = convert_string(v_topic);
-	std::string content = marshaler.dump();
+		std::string topic = convert_string(v_topic);
+		std::string content = marshaler.dump();
 
-	p_publisher->publish(topic, content);
+		p_publisher->publish(topic, content);
+	}
+	catch (GodotAiBridgeException& e) {
+		if (verbosity >= ERROR) {
+			std::cerr << "Godot-AI-Bridge: errors occurred when publishing message -> " << e.what() << std::endl;
+		}
+	}
 }
 
 
@@ -296,7 +308,7 @@ void Publisher::construct_message(zmq::message_t& msg, const std::string& topic,
 	memcpy(p_buffer + topic.length() + 1, payload.c_str(), payload.length());
 }
 
-size_t Publisher::get_message_length(const std::string& topic, const std::string& msg) 
+size_t Publisher::get_message_length(const std::string& topic, const std::string& msg)
 {
 	return topic.length() + msg.length() + 1; // additional character for space between topic and json
 }
