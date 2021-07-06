@@ -1,17 +1,28 @@
-FROM ubuntu
+# Godot AI Bridge (GAB) "Minimal" Runtime Environment Image (Based on a GLIBC version of Alpine Linux)
+# 
+# Description: Contains GAB dependencies, GAB library, and a Godot server.
+# Usage: (1) Create exported linux server PCK for your environment 
+#               (see https://docs.godotengine.org/en/stable/getting_started/workflow/export/exporting_pcks.html)
+#        (2) Copy PCK into /godot-runtime (this is referred to later as <PCK>)
+#        (2) Change working directory to /godot-runtime
+#        (3) Execute "./godot-server --main-pack <PCK>"
+################################################################################################################
+FROM frolvlad/alpine-glibc
 
-# RUN apk update && apk add zeromq-dev
-RUN apt-get update && apt-get install -y wget unzip libzmq3-dev 
-    
-WORKDIR /run
-  
-# Copy Project Into Image
-COPY ./demo/exports/linux/server/env.pck /run
-COPY ./lib/linux/64/libgab.so /run
- 
+# Godot will complain on start-up if the locale information is not set
+ENV LANG en_US.UTF-8
+
+WORKDIR /godot-runtime
+
+# Installs libzmq dependencies
+RUN apk update && \
+    apk add zeromq
+
+# Copy GAB Library Into Runtime Directory
+COPY lib/linux/64/* /godot-runtime
+
 # Download Godot Server
 RUN wget https://downloads.tuxfamily.org/godotengine/3.3.2/Godot_v3.3.2-stable_linux_server.64.zip && \
     unzip Godot_v3.3.2-stable_linux_server.64.zip && \
+    mv Godot_v3.3.2-stable_linux_server.64 godot-server && \
     rm Godot_v3.3.2-stable_linux_server.64.zip
-    
-CMD ["./Godot_v3.3.2-stable_linux_server.64", "--main-pack", "env.pck"]
