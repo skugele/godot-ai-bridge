@@ -1,0 +1,31 @@
+# Godot AI Bridge (GAB) Development Image
+# 
+# Description: Contains all GAB dependencies and a Godot server runtime (see https://hub.docker.com/r/skugele/gab-dev)
+#######################################################################################################################
+FROM ubuntu:latest
+
+# Install Build Tools And ZeroMQ Development Library And Headers
+RUN apt-get update && \
+    apt-get install -y build-essential g++ scons wget unzip git libzmq3-dev 
+    
+# Create Build Directory
+WORKDIR /build
+  
+# Install Godot-Cpp 
+RUN git clone https://github.com/godotengine/godot-cpp.git --recursive && \
+    cd godot-cpp && \
+    scons platform=linux target=release generate_bindings=yes -j8
+
+# Install JSON for Modern C++ (Header Only)
+RUN mkdir /usr/local/include/nlohmann && \
+    cd /usr/local/include/nlohmann && \
+    wget https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp
+
+# Create Binary Directory
+WORKDIR /bin
+
+# Download Godot Server
+RUN wget https://downloads.tuxfamily.org/godotengine/3.3.2/Godot_v3.3.2-stable_linux_server.64.zip && \
+    unzip Godot_v3.3.2-stable_linux_server.64.zip && \
+    ln -sf Godot_v3.3.2-stable_linux_server.64 godot && \
+    rm Godot_v3.3.2-stable_linux_server.64.zip
