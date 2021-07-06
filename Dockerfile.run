@@ -1,0 +1,18 @@
+FROM ubuntu
+
+# RUN apk update && apk add zeromq-dev
+RUN apt-get update && apt-get install -y wget unzip libzmq3-dev 
+    
+RUN mkdir /gab
+  
+# Copy Project Into Image
+COPY . /gab
+
+WORKDIR /gab/demo
+ 
+# Download Godot Server
+RUN wget https://downloads.tuxfamily.org/godotengine/3.3.2/Godot_v3.3.2-stable_linux_server.64.zip && \
+    unzip Godot_v3.3.2-stable_linux_server.64.zip && \
+    rm Godot_v3.3.2-stable_linux_server.64.zip
+    
+CMD ["./Godot_v3.3.2-stable_linux_server.64"]

@@ -1,0 +1,23 @@
+FROM ubuntu:latest
+
+RUN apt-get update && \
+    apt-get install -y build-essential g++ scons wget unzip git libzmq3-dev 
+    
+# Create Working Directory
+WORKDIR /build
+  
+# Copy Project Into Image
+COPY . /build
+ 
+# Install Godot-Cpp 
+RUN cd .. && \
+    git clone https://github.com/godotengine/godot-cpp.git --recursive && \
+    cd godot-cpp && \
+    scons platform=linux target=release generate_bindings=yes -j8
+
+# Install JSON for Modern C++ (Header Only)
+RUN mkdir /usr/local/include/nlohmann && \
+    cd /usr/local/include/nlohmann && \
+    wget https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp
+    
+CMD ["scons", "platform=linux", "target=release", "-j8"]
