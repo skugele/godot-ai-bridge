@@ -1,12 +1,12 @@
 #pragma once
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 
 namespace gab {
-	class GodotAiBridgeException : public std::exception{
+	class GodotAiBridgeException : public std::runtime_error{
 	public:
-		GodotAiBridgeException(const char* what) : std::exception(what) {}
-		GodotAiBridgeException(const std::string& what): std::exception(what.c_str()){}
+		GodotAiBridgeException(const char* const what) : std::runtime_error(what) {}
+		GodotAiBridgeException(const std::string& what): std::runtime_error(what.c_str()){}
 	};
 };
