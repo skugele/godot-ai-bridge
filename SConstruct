@@ -68,9 +68,11 @@ elif env['platform'] in ('x11', 'linux'):
 
     # paths to dependencies
     CPPPATH += [
+        '/usr/include/',
         '/usr/local/include/',
    
         # JSON serializer/deserializer
+        '/usr/include/nlohmann/',
         '/usr/local/include/nlohmann/',
     ]
     
@@ -117,8 +119,6 @@ elif env['platform'] == "windows":
         # libzmq
         'C:/opt/libzmq/lib/Release/',
 
-        # libzmqpp
-        # 'C:/opt/libzmqpp/Release/',
     ]
     
     LIBS += [
@@ -144,7 +144,6 @@ else:
 
 gdnative_cpp_library += '.' + str(env['bits'])
 
-# make sure our binding library is properly includes
 
 CPPPATH += [
     # project headers
