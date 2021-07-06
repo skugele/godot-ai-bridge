@@ -149,7 +149,7 @@ godot::Variant gab::unmarshal_to_variant(nlohmann::json& value) {
 		v = unmarshal_to_structured_variant(value);
 	}
 	else {
-		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + std::string(value));
 	}
 	return v;
 }
@@ -171,7 +171,7 @@ godot::Variant gab::unmarshal_to_basic_variant(nlohmann::json& value) {
 		return unmarshal_to_bool_variant(value);
 	}
 	else {
-		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + std::string(value));
 	}
 }
 
@@ -184,7 +184,7 @@ godot::Variant gab::unmarshal_to_structured_variant(nlohmann::json& value) {
 		v = unmarshal_to_dictionary_variant(value);
 	}
 	else {
-		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + value);
+		throw GodotAiBridgeException("unmarshal failed (reason: unknown variant type). value = " + std::string(value));
 	}
 	return v;
 }
