@@ -7,8 +7,8 @@ extends Node2D
 ###################################
 onready var gab = $GabLib  # library reference
 onready var gab_options = {
-	'publisher_port': 10003, # specifies alternate port - default port is 10001
-	'listener_port': 10004, # specifies alternate port - default port is 10002
+	'publisher_port': 10001, # specifies alternate port - default port is 10001
+	'listener_port': 10002, # specifies alternate port - default port is 10002
 	
 	# supported socket options (for advanced users - see ZeroMQ documentation for details)
 	'socket_options': {
